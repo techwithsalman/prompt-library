@@ -26,6 +26,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (input) input.value = q;
     
     const esc = s => String(s || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    const decodeHtml = html => {
+        const txt = document.createElement("textarea");
+        txt.innerHTML = html;
+        return txt.value;
+    };
     
     if (!q) {
         out.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #64748b; font-size: 1.1rem; background: #fff; border-radius: 12px; border: 1px solid #eef2f6;">Search our collection of AI prompts.</div>';
@@ -40,12 +45,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
         const results = index.map(item => {
-            const haystack = (item.title + ' ' + (item.category||'') + ' ' + (item.excerpt||'')).toLowerCase();
+            const decTitle = decodeHtml(item.title || '');
+            const decExcerpt = decodeHtml(item.excerpt || '');
+            const haystack = (decTitle + ' ' + (item.category||'') + ' ' + decExcerpt).toLowerCase();
             const score = terms.reduce((n, t) => n + (haystack.includes(t) ? 1 : 0), 0);
-            return { ...item, score };
+            return { ...item, decTitle, decExcerpt, score };
         })
         .filter(x => x.score > 0)
-        .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
+        .sort((a, b) => b.score - a.score || a.decTitle.localeCompare(b.decTitle));
         
         if (!results.length) {
             out.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; color: #64748b; background: #f8fbff; border-radius: 12px; border: 1px solid #eef2f6;">' +
@@ -56,12 +63,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         out.innerHTML = results.map(item => {
             const catHtml = item.category ? '<span style="display:inline-block; font-size: 0.75rem; background: #eff6ff; color: #0B5CFF; padding: 4px 8px; border-radius: 12px; font-weight: 600; margin-bottom: 8px;">' + esc(item.category) + '</span>' : '';
-            return '<a class="prompt-card" href="..' + esc(item.url) + '" style="display: flex; flex-direction: column; background: #fff; border: 1px solid #eef2f6; border-radius: 16px; overflow: hidden; text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s;">' +
-                (item.thumbnail ? '<div class="prompt-card-image" style="aspect-ratio: 16/9; overflow: hidden; background: #f1f5f9;"><img loading="lazy" src="..' + esc(item.thumbnail) + '" alt="' + esc(item.title) + '" style="width: 100%; height: 100%; object-fit: cover;"></div>' : '') +
-                '<div class="prompt-card-content" style="padding: 20px;">' +
-                    catHtml +
-                    '<h3 style="margin: 0 0 8px; font-size: 1.1rem; color: #1e293b; line-height: 1.4;">' + esc(item.title) + '</h3>' +
-                    (item.excerpt ? '<p style="margin: 0; color: #64748b; font-size: 0.9rem; line-height: 1.5;">' + esc(item.excerpt) + '</p>' : '') +
+            
+            const placeholder = '<div style="width: 100%; height: 100%; background: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #cbd5e1;"><svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><span style="font-size: 0.8rem; margin-top: 8px; font-weight: 500; color: #94a3b8;">Prompt Library</span></div>';
+            const imgHtml = item.thumbnail ? '<img loading="lazy" src="..' + esc(item.thumbnail) + '" alt="' + esc(item.decTitle) + '" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">' : placeholder;
+            
+            return '<a class="prompt-card" href="..' + esc(item.url) + '" style="display: flex; flex-direction: column; background: #fff; border: 1px solid #eef2f6; border-radius: 16px; overflow: hidden; text-decoration: none; color: inherit; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); transition: transform 0.2s, box-shadow 0.2s;">' +
+                '<div class="prompt-card-image" style="width: 100%; aspect-ratio: 16/9; overflow: hidden; background: #f1f5f9; border-bottom: 1px solid #eef2f6;">' + imgHtml + '</div>' +
+                '<div class="prompt-card-content" style="padding: 20px; flex: 1; display: flex; flex-direction: column;">' +
+                    '<div>' + catHtml + '</div>' +
+                    '<h3 style="margin: 0 0 8px; font-size: 1.1rem; color: #1e293b; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">' + esc(item.decTitle) + '</h3>' +
+                    (item.decExcerpt ? '<p style="margin: 0; color: #64748b; font-size: 0.9rem; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">' + esc(item.decExcerpt) + '</p>' : '') +
                 '</div>' +
             '</a>';
         }).join('');
