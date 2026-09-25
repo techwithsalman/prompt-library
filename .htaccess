@@ -1,0 +1,23 @@
+Options -Indexes
+DirectoryIndex index.html
+RewriteEngine On
+
+# Serve real files/directories directly
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Static search
+RewriteRule ^search/?$ search/index.html [L]
+
+# Static pages keep their historical public URLs
+RewriteCond %{DOCUMENT_ROOT}/pages/$1/index.html -f
+RewriteRule ^([^/]+)/?$ pages/$1/index.html [L]
+
+# Categories, tags, authors and pagination routes
+RewriteCond %{DOCUMENT_ROOT}/categories/$1/index.html -f
+RewriteRule ^(.+?)/?$ categories/$1/index.html [L]
+
+# Articles keep historical root slugs
+RewriteCond %{DOCUMENT_ROOT}/articles/$1/index.html -f
+RewriteRule ^([^/]+)/?$ articles/$1/index.html [L]

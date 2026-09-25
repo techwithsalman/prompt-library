@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>Search - Prompt Library</title><meta content="noindex,follow" name="robots"/><link href="../search/index.html" rel="canonical"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/><link href="../assets/css/style.css" rel="stylesheet"/></head><body class="prompt-library-site"><header class="site-header"><div class="container header-inner"><a class="logo" href="../index.html"><img alt="Prompt Library" src="../assets/images/prompt-library-logo-header.png" width="190"/></a><nav class="main-nav" id="mainNav"><a href="../categories/photo-prompts/index.html">Photo Prompts</a><a href="../categories/video-prompts/index.html">Video Prompts</a><a href="../categories/templates/index.html">Templates</a><a href="../categories/prompt-seen-app-download/index.html">Prompt App</a><a href="../pages/about-us/index.html">About Us</a><a href="../pages/contact-us/index.html">Contact Us</a></nav><div class="header-actions"><button aria-controls="mainNav" aria-expanded="false" aria-label="Menu" class="mobile-menu-btn" id="mobileMenuBtn">☰</button></div></div></header><main class="search-page" style="padding: 60px 0; min-height: 60vh; background: #f8fbff;">
+    <div class="container">
+        <h1 style="font-size: 2.5rem; text-align: center; margin-bottom: 1rem;">Search Prompts</h1>
+        <p class="search-query-note" id="searchNote" style="text-align: center; color: #555; margin-bottom: 2rem;">Search our prompt collection.</p>
+        
+        <form action="../search/index.html" class="hero-search-bar" method="get" style="margin: 0 auto 40px; max-width: 720px; display: flex; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 8px; overflow: hidden; background: white;">
+            <input id="pageSearchInput" name="q" placeholder="Search prompts, templates, ideas..." required type="search" style="flex: 1; padding: 16px 20px; border: none; font-size: 1.1rem; outline: none;"/>
+            <button class="hero-search-submit" type="submit" style="background: #0B5CFF; color: white; border: none; padding: 0 32px; font-weight: 600; cursor: pointer; font-size: 1.1rem;">Search</button>
+        </form>
+        
+        <div class="prompt-grid" id="searchResults" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px;">
+        </div>
+    </div>
+</main>
+<script src="../assets/data/search-index.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(location.search);
+    const q = (params.get('q') || params.get('s') || '').trim();
+    const note = document.getElementById('searchNote');
+    const out = document.getElementById('searchResults');
+    const input = document.getElementById('pageSearchInput');
+    
+    if (input) input.value = q;
+    
+    const esc = s => String(s || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    
+    if (!q) {
+        out.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #64748b; font-size: 1.1rem; background: #fff; border-radius: 12px; border: 1px solid #eef2f6;">Search our collection of AI prompts.</div>';
+        return;
+    }
+    
+    note.innerHTML = 'Search results for "<strong>' + esc(q) + '</strong>"';
+    
+    try {
+        const index = window.PROMPT_LIBRARY_SEARCH_INDEX;
+        if (!index) throw new Error("Search index not found in window");
+        
+        const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+        const results = index.map(item => {
+            const haystack = (item.title + ' ' + (item.category||'') + ' ' + (item.excerpt||'')).toLowerCase();
+            const score = terms.reduce((n, t) => n + (haystack.includes(t) ? 1 : 0), 0);
+            return { ...item, score };
+        })
+        .filter(x => x.score > 0)
+        .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
+        
+        if (!results.length) {
+            out.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; color: #64748b; background: #f8fbff; border-radius: 12px; border: 1px solid #eef2f6;">' +
+                '<h3 style="font-size: 1.5rem; color: #1e293b; margin-bottom: 8px;">No prompts found for "' + esc(q) + '".</h3>' +
+            '</div>';
+            return;
+        }
+        
+        out.innerHTML = results.map(item => {
+            const catHtml = item.category ? '<span style="display:inline-block; font-size: 0.75rem; background: #eff6ff; color: #0B5CFF; padding: 4px 8px; border-radius: 12px; font-weight: 600; margin-bottom: 8px;">' + esc(item.category) + '</span>' : '';
+            return '<a class="prompt-card" href="..' + esc(item.url) + '" style="display: flex; flex-direction: column; background: #fff; border: 1px solid #eef2f6; border-radius: 16px; overflow: hidden; text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s;">' +
+                (item.thumbnail ? '<div class="prompt-card-image" style="aspect-ratio: 16/9; overflow: hidden; background: #f1f5f9;"><img loading="lazy" src="..' + esc(item.thumbnail) + '" alt="' + esc(item.title) + '" style="width: 100%; height: 100%; object-fit: cover;"></div>' : '') +
+                '<div class="prompt-card-content" style="padding: 20px;">' +
+                    catHtml +
+                    '<h3 style="margin: 0 0 8px; font-size: 1.1rem; color: #1e293b; line-height: 1.4;">' + esc(item.title) + '</h3>' +
+                    (item.excerpt ? '<p style="margin: 0; color: #64748b; font-size: 0.9rem; line-height: 1.5;">' + esc(item.excerpt) + '</p>' : '') +
+                '</div>' +
+            '</a>';
+        }).join('');
+        
+    } catch (err) {
+        console.error(err);
+    }
+});
+</script>
+<script defer="" src="../assets/js/main.js"></script></body></html>
