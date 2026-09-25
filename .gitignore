@@ -1,3 +1,5 @@
-*.js
 .DS_Store
 Thumbs.db
+fix-links.js
+update-pages.js
+update-search.js
